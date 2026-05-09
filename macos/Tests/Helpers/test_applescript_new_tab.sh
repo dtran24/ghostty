@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Regression test for: `tell application "Ghostty" to new tab` returning -1708.
 #
 # Bug: ScriptTab held its parent ScriptWindow with a weak reference, so a tab
@@ -17,7 +17,7 @@
 #
 # Defaults to macos/build/Debug/Ghostty.app relative to the repo root.
 
-set -u
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
@@ -34,15 +34,19 @@ cleanup() {
 }
 trap cleanup EXIT
 
-open "$APP"
+osascript -e "tell application \"$APP\" to activate"
 sleep 4
 
 run_case() {
     local name="$1"
     local script="$2"
     local out
-    out=$(osascript -e "$script" 2>&1)
-    local rc=$?
+    local rc
+    if out=$(osascript -e "$script" 2>&1); then
+        rc=0
+    else
+        rc=$?
+    fi
     if [ $rc -ne 0 ] || [[ "$out" == *"-1708"* ]] || [[ "$out" == *"error"* ]]; then
         echo "FAIL [$name]: $out"
         return 1
