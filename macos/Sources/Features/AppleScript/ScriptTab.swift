@@ -10,11 +10,13 @@ final class ScriptTab: NSObject {
     /// Stable identifier used by AppleScript `tab id "..."` references.
     private let stableID: String
 
-    /// Weak back-reference to the scripting window that owns this tab wrapper.
+    /// Back-reference to the scripting window that owns this tab wrapper.
     ///
-    /// We only need this for dynamic properties (`index`, `selected`) and for
-    /// building an object specifier path.
-    private weak var window: ScriptWindow?
+    /// Held strongly so that a tab returned from a command handler can still
+    /// build an `objectSpecifier` after the local `ScriptWindow` that produced
+    /// it goes out of scope. `ScriptWindow` does not retain `ScriptTab`
+    /// (`tabs` and `valueInTabs` vend fresh wrappers), so no cycle is formed.
+    private var window: ScriptWindow?
 
     /// Live terminal controller for this tab.
     ///
