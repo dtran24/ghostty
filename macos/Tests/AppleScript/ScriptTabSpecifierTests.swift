@@ -2,7 +2,7 @@ import AppKit
 import Testing
 @testable import Ghostty
 
-@Suite
+@Suite(.serialized)
 struct ScriptTabSpecifierTests {
     @MainActor
     @Test func resolvesLegacyWindowSpecifierAfterTabGroupForms() throws {
@@ -58,8 +58,7 @@ private final class ScriptTabSpecifierTestContext {
     let secondaryWindow: NSWindow
 
     init() throws {
-        let tempConfig = try TemporaryConfig("")
-        let app = Ghostty.App(configPath: tempConfig.temporaryFile.path)
+        let app = try Self.sharedApp()
 
         let primaryController = ScriptTabSpecifierTestController(app, title: "Primary")
         let secondaryController = ScriptTabSpecifierTestController(app, title: "Secondary")
@@ -75,10 +74,29 @@ private final class ScriptTabSpecifierTestContext {
         self.secondaryWindow = secondaryWindow
     }
 
+    /// Reuse a single Ghostty.App across the whole test bundle.
+    ///
+    /// `Ghostty.App.init` initializes the libghostty Zig core and registers
+    /// callbacks via an unretained `self` pointer. Constructing multiple
+    /// instances during a test run can race with Zig threads and crash the
+    /// test runner; a single shared instance avoids that.
+    private static var sharedAppInstance: Ghostty.App?
+    private static var sharedTempConfig: TemporaryConfig?
+
+    private static func sharedApp() throws -> Ghostty.App {
+        if let existing = sharedAppInstance { return existing }
+        let tempConfig = try TemporaryConfig("")
+        let app = Ghostty.App(configPath: tempConfig.temporaryFile.path)
+        sharedTempConfig = tempConfig
+        sharedAppInstance = app
+        return app
+    }
+
     func presentWindows() {
-        NSApp.activate(ignoringOtherApps: true)
-        primaryWindow.makeKeyAndOrderFront(nil)
-        secondaryWindow.makeKeyAndOrderFront(nil)
+        // Avoid `NSApp.activate(ignoringOtherApps:)` here — it mutates global
+        // app activation state and races with parallel test bundles.
+        primaryWindow.orderFront(nil)
+        secondaryWindow.orderFront(nil)
         spinRunLoop()
     }
 
@@ -101,7 +119,10 @@ private final class ScriptTabSpecifierTestContext {
 @MainActor
 private final class ScriptTabSpecifierTestController: BaseTerminalController {
     init(_ ghostty: Ghostty.App, title: String) {
-        super.init(ghostty)
+        // Pass an empty surface tree so init does not spawn a real terminal
+        // surface (which forks a login shell). The specifier tests only need
+        // a controller-with-window, not a live PTY.
+        super.init(ghostty, baseConfig: nil, surfaceTree: SplitTree())
 
         let window = NSWindow(
             contentRect: NSRect(x: 40, y: 40, width: 640, height: 480),
