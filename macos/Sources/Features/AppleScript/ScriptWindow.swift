@@ -137,6 +137,26 @@ final class ScriptWindow: NSObject {
         controllers.first(where: { ScriptTab.stableID(controller: $0) == tabID })
     }
 
+    /// Reports whether this scripting window currently owns a tab with the given ID.
+    func containsTab(uniqueID: String) -> Bool {
+        guard NSApp.isAppleScriptEnabled else { return false }
+        return controller(tabID: uniqueID) != nil
+    }
+
+    /// Matches both the current scripting window ID and any legacy native-window IDs
+    /// that may have been serialized before AppKit finished reconciling tab groups.
+    func matches(uniqueID: String) -> Bool {
+        guard NSApp.isAppleScriptEnabled else { return false }
+        if stableID == uniqueID {
+            return true
+        }
+
+        return controllers.contains { controller in
+            guard let window = controller.window else { return false }
+            return Self.stableID(window: window) == uniqueID
+        }
+    }
+
     /// Live controller list for this scripting window.
     ///
     /// We recalculate on every access so AppleScript immediately sees tab-group

@@ -95,6 +95,15 @@ final class ScriptTab: NSObject {
         return controller
     }
 
+    /// Best-effort scripting window for object-specifier generation.
+    ///
+    /// Prefer the live application window wrapper when it can already resolve this
+    /// tab ID so returned AppleScript references use the settled container ID.
+    private var scriptingWindowForSpecifier: ScriptWindow? {
+        guard NSApp.isAppleScriptEnabled else { return nil }
+        return NSApp.scriptWindows.first(where: { $0.containsTab(uniqueID: stableID) }) ?? window
+    }
+
     /// Exposed as the AppleScript `terminals` element on a tab.
     ///
     /// Returns all terminal surfaces (split panes) within this tab.
@@ -160,7 +169,7 @@ final class ScriptTab: NSObject {
     /// Provides Cocoa scripting with a canonical "path" back to this object.
     override var objectSpecifier: NSScriptObjectSpecifier? {
         guard NSApp.isAppleScriptEnabled else { return nil }
-        guard let window else { return nil }
+        guard let window = scriptingWindowForSpecifier else { return nil }
         guard let windowClassDescription = window.classDescription as? NSScriptClassDescription else {
             return nil
         }

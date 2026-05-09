@@ -77,7 +77,7 @@ extension NSApplication {
     @objc(valueInScriptWindowsWithUniqueID:)
     func valueInScriptWindows(uniqueID: String) -> ScriptWindow? {
         guard isAppleScriptEnabled else { return nil }
-        return scriptWindows.first(where: { $0.stableID == uniqueID })
+        return scriptWindows.first(where: { $0.matches(uniqueID: uniqueID) })
     }
 }
 
