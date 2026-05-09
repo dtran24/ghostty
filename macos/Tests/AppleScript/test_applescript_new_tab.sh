@@ -13,7 +13,7 @@
 #   3. tell application "Ghostty" to new window              (was working)
 #
 # Usage:
-#   macos/Tests/Helpers/test_applescript_new_tab.sh [path/to/Ghostty.app]
+#   macos/Tests/AppleScript/test_applescript_new_tab.sh [path/to/Ghostty.app]
 #
 # Defaults to macos/build/Debug/Ghostty.app relative to the repo root.
 
